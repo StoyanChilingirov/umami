@@ -3,3 +3,7 @@ included_files = ["node_modules/.geo/**"]
 
 [[plugins]]
 package = "@netlify/plugin-nextjs"
+
+[[edge_functions]]
+  function = "protect-analytics"
+  path = "/api/send"
