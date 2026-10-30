@@ -1,27 +1,55 @@
 export default async (request, context) => {
-  // Only inspect analytics tracking payloads
+  const origin = request.headers.get('origin');
+  
+  const allowedDomains = [
+    'https://webabout.co.uk',
+    'https://wonderful-sable-e155ef.netlify.app',
+    'https://chiits.com',
+    'https://floorstofit.com',
+    'https://chilingirov.co.uk',
+    'https://ankcommercial.co.uk',
+    'https://remember2.click',
+    'https://rememberto.click',
+    'https://webapproach.co.uk'
+  ];
+
+  const isAllowedOrigin = allowedDomains.some(d => origin?.startsWith(d));
+
+  if (request.method === 'OPTIONS') {
+    if (isAllowedOrigin) {
+      return new Response(null, {
+        status: 204,
+        headers: {
+          'Access-Control-Allow-Origin': origin,
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type',
+        },
+      });
+    }
+    return new Response('Forbidden', { status: 403 });
+  }
+
   if (request.url.includes('/api/send')) {
-    const origin = request.headers.get('origin');
     const referer = request.headers.get('referer');
+    const isAllowedReferer = allowedDomains.some(d => referer?.startsWith(d));
 
-    // List of your actual production/allowed domains
-    const allowedDomains = [
-      'https://webabout.co.uk',
-      'https://wonderful-sable-e155ef.netlify.app/' // Replace with your live Netlify URL
-    ];
-
-    // Check if origin or referer matches an allowed domain
-    const isValidOrigin = allowedDomains.some(d => origin?.startsWith(d));
-    const isValidReferer = allowedDomains.some(d => referer?.startsWith(d));
-
-    // If it's opened locally (file://), via desktop, or from a rogue domain, block it!
-    if (!isValidOrigin && !isValidReferer) {
-      return new Response(JSON.stringify({ error: 'Forbidden: Unauthorized origin' }), {
+    if (!isAllowedOrigin && !isAllowedReferer) {
+      return new Response(JSON.stringify({ error: 'Unauthorized origin' }), {
         status: 403,
-        headers: { 'content-type': 'application/json' },
+        headers: { 
+          'content-type': 'application/json',
+          'Access-Control-Allow-Origin': origin || '*'
+        },
       });
     }
   }
 
-  return context.next();
+  // --- PASS THROUGH WITH GEO/IP PRESERVATION ---
+  const response = await context.next();
+  
+  if (isAllowedOrigin && origin) {
+    response.headers.set('Access-Control-Allow-Origin', origin);
+  }
+
+  return response;
 };
