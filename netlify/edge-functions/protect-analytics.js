@@ -18,7 +18,6 @@ export default async (request, context) => {
   // 1. Handle browser CORS preflight (OPTIONS requests)
   if (request.method === 'OPTIONS') {
     if (isAllowedOrigin) {
-      // Dynamically allow whatever headers Umami's tracker sends (e.g., x-umami-hostname)
       const requestedHeaders = request.headers.get('access-control-request-headers') || 'Content-Type, x-umami-hostname';
       
       return new Response(null, {
@@ -49,8 +48,20 @@ export default async (request, context) => {
     }
   }
 
-  // 3. Pass allowed requests through
-  const response = await context.next();
+  // 3. Preserve your true location by injecting Netlify's client IP into proxy headers
+  const clientIp = context.ip;
+  const newHeaders = new Headers(request.headers);
+  if (clientIp) {
+    newHeaders.set('x-forwarded-for', clientIp);
+    newHeaders.set('x-real-ip', clientIp);
+  }
+
+  const modifiedRequest = new Request(request, {
+    headers: newHeaders,
+  });
+
+  // 4. Pass the modified request through to Umami
+  const response = await context.next(modifiedRequest);
   
   if (isAllowedOrigin && origin) {
     response.headers.set('Access-Control-Allow-Origin', origin);
