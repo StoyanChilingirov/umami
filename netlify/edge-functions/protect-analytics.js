@@ -7,7 +7,7 @@ export default async (request, context) => {
     // List of your actual production/allowed domains
     const allowedDomains = [
       'https://webabout.co.uk',
-      'https://your-actual-site.netlify.app' // Replace with your live Netlify URL
+      'https://wonderful-sable-e155ef.netlify.app/' // Replace with your live Netlify URL
     ];
 
     // Check if origin or referer matches an allowed domain
