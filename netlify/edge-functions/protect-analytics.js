@@ -48,19 +48,27 @@ export default async (request, context) => {
     }
   }
 
-  // 3. Preserve your true location by injecting Netlify's client IP into proxy headers
-  const clientIp = context.ip;
+  // 3. Inject Netlify's Edge Geo & IP headers explicitly
   const newHeaders = new Headers(request.headers);
-  if (clientIp) {
-    newHeaders.set('x-forwarded-for', clientIp);
-    newHeaders.set('x-real-ip', clientIp);
+  
+  // Forward client IP
+  if (context.ip) {
+    newHeaders.set('x-forwarded-for', context.ip);
+    newHeaders.set('x-client-ip', context.ip);
+    newHeaders.set('x-real-ip', context.ip);
+  }
+
+  // Netlify provides country ISO codes directly at edge context
+  if (context.geo?.country?.code) {
+    newHeaders.set('x-country-code', context.geo.country.code);
+    newHeaders.set('cf-ipcountry', context.geo.country.code); // Fallback header used by common geo libraries
   }
 
   const modifiedRequest = new Request(request, {
     headers: newHeaders,
   });
 
-  // 4. Pass the modified request through to Umami
+  // 4. Pass the modified request through
   const response = await context.next(modifiedRequest);
   
   if (isAllowedOrigin && origin) {
